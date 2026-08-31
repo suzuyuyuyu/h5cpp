@@ -1,0 +1,67 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "my-intel",
+      "inherits": "intel",
+      "displayName": "Intel LLVM, C++17 (this machine)",
+      "description": "Points at the locally installed serial h5c and HDF5.",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{HOME}/.local/opt/intel/h5c-0.1.0;$env{HOME}/.local/opt/intel/hdf5-2.1.0",
+        "CMAKE_INSTALL_PREFIX": "$env{HOME}/.local/opt/intel/h5cpp-0.1.0"
+      }
+    },
+    {
+      "name": "my-intel-mpi",
+      "inherits": "intel-mpi",
+      "displayName": "Intel LLVM + Intel MPI (this machine)",
+      "description": "Must point at a PARALLEL h5c. Keep it on a shared filesystem: a prefix under /tmp is invisible to compute nodes.",
+      "cacheVariables": {
+        "CMAKE_PREFIX_PATH": "$env{HOME}/.local/opt/intel/h5c-mpi-0.1.0;$env{HOME}/.local/opt/intel/phdf5-2.1.0",
+        "CMAKE_INSTALL_PREFIX": "$env{HOME}/.local/opt/intel/h5cpp-mpi-0.1.0"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "my-intel",
+      "configurePreset": "my-intel"
+    },
+    {
+      "name": "my-intel-mpi",
+      "configurePreset": "my-intel-mpi"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "my-intel",
+      "configurePreset": "my-intel",
+      "filter": {
+        "include": {
+          "label": "quick"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "my-intel-mpi",
+      "configurePreset": "my-intel-mpi",
+      "displayName": "quick only; the mpi-labelled tests need a job script",
+      "filter": {
+        "include": {
+          "label": "quick"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

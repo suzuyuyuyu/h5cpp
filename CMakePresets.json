@@ -1,0 +1,172 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "serial",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "H5CPP_ENABLE_PARALLEL": "OFF"
+      }
+    },
+    {
+      "name": "parallel",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "H5CPP_ENABLE_PARALLEL": "ON"
+      }
+    },
+    {
+      "name": "intel-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-Wall -Wextra"
+      }
+    },
+    {
+      "name": "gnu-flags",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_FLAGS": "-Wall -Wextra"
+      }
+    },
+    {
+      "name": "intel",
+      "inherits": [
+        "serial",
+        "intel-flags"
+      ],
+      "displayName": "Intel LLVM, C++17",
+      "description": "Preferred toolchain. Note that icx uses the system libstdc++, so C++20 library features may be unavailable regardless of the standard.",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "icpx",
+        "H5CPP_CXX_STANDARD": "17"
+      }
+    },
+    {
+      "name": "intel-cxx20",
+      "inherits": "intel",
+      "displayName": "Intel LLVM, C++20",
+      "description": "C++20 language mode. std::span is used only if the standard library actually provides it.",
+      "cacheVariables": {
+        "H5CPP_CXX_STANDARD": "20"
+      }
+    },
+    {
+      "name": "intel-mpi",
+      "inherits": [
+        "parallel",
+        "intel-flags"
+      ],
+      "displayName": "Intel LLVM + Intel MPI, C++17",
+      "description": "Preferred toolchain for parallel I/O. Needs an h5c built with H5C_ENABLE_PARALLEL=ON.",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "mpiicpx",
+        "H5CPP_CXX_STANDARD": "17"
+      }
+    },
+    {
+      "name": "gnu",
+      "inherits": [
+        "serial",
+        "gnu-flags"
+      ],
+      "displayName": "GNU, C++17",
+      "description": "Portability baseline. Everything must also build here.",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "H5CPP_CXX_STANDARD": "17"
+      }
+    },
+    {
+      "name": "gnu-mpi",
+      "inherits": [
+        "parallel",
+        "gnu-flags"
+      ],
+      "displayName": "GNU + MPI, C++17",
+      "description": "Portability baseline for parallel I/O.",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "mpicxx",
+        "H5CPP_CXX_STANDARD": "17"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "intel",
+      "configurePreset": "intel"
+    },
+    {
+      "name": "intel-cxx20",
+      "configurePreset": "intel-cxx20"
+    },
+    {
+      "name": "intel-mpi",
+      "configurePreset": "intel-mpi"
+    },
+    {
+      "name": "gnu",
+      "configurePreset": "gnu"
+    },
+    {
+      "name": "gnu-mpi",
+      "configurePreset": "gnu-mpi"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "quick-base",
+      "hidden": true,
+      "filter": {
+        "include": {
+          "label": "quick"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "intel",
+      "inherits": "quick-base",
+      "configurePreset": "intel"
+    },
+    {
+      "name": "intel-cxx20",
+      "inherits": "quick-base",
+      "configurePreset": "intel-cxx20"
+    },
+    {
+      "name": "intel-mpi",
+      "inherits": "quick-base",
+      "configurePreset": "intel-mpi"
+    },
+    {
+      "name": "gnu",
+      "inherits": "quick-base",
+      "configurePreset": "gnu"
+    },
+    {
+      "name": "gnu-mpi",
+      "inherits": "quick-base",
+      "configurePreset": "gnu-mpi"
+    }
+  ]
+}

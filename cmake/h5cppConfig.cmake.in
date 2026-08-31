@@ -1,0 +1,8 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(h5c)
+
+include("${CMAKE_CURRENT_LIST_DIR}/h5cppTargets.cmake")
+
+check_required_components(h5cpp)

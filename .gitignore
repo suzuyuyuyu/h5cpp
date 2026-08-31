@@ -1,0 +1,11 @@
+build/
+CMakeUserPresets.json
+compile_commands.json
+*.h5
+stdout/*
+!stdout/.gitkeep
+stderr/*
+!stderr/.gitkeep
+out
+err
+example/build/
