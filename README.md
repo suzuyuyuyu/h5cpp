@@ -145,6 +145,28 @@ g.read_interleaved<double>("/velocity", {u, v, w});
 引数の検証は `h5c` 側で全ランク集約されるため、1 ランクだけの不正な引数は
 デッドロックせず全ランクで同じ `status()` の `h5cpp::error` になります。
 
+## 可視化
+
+`h5cpp/h5cpp_viz.hpp` は、分散メッシュと可視化フィールドを XDMF 用の配置で
+書き出します。connectivity は各ランク内の 0-origin 節点番号を渡してください。
+
+```cpp
+#include <h5cpp/h5cpp_viz.hpp>
+
+h5cpp::viz out("result/seq000000.h5", time);
+h5cpp::viz_mesh mesh{h5cpp::viz_kind::unstructured, "fluid",
+                      "Tetrahedron", 4, npoints, ncells};
+out.begin_mesh(mesh);
+out.write_nodes<double>({x, y, z});
+out.write_connectivity(connectivity);
+out.write_point_data<double>("Velocity", {u, v, w});
+out.close();
+```
+
+すべての操作は collective で、ローカルの点数・セル数は 0 でも構いません。
+ファイル配置の詳細は [`h5c/docs/FORMAT.md`](../h5c/docs/FORMAT.md) の
+「可視化レイアウト」を参照してください。
+
 ## 配列の次元順序
 
 `h5c` の規約をそのまま継承します。**shape は row-major**、すなわち

@@ -53,6 +53,12 @@ export OMP_NUM_THREADS=1
 BUILD_DIR="${BUILD_DIR:-${H5CPP_ROOT}/build/my-intel-mpi}"
 NRANKS="${NRANKS:-${SLURM_NTASKS:-2}}"
 
+# Resolve to an absolute path: the loop below cd's into the build tree, so a
+# BUILD_DIR passed in relative would stop resolving the moment we move.
+if [[ "${BUILD_DIR}" != /* ]]; then
+    BUILD_DIR="${H5CPP_ROOT}/${BUILD_DIR}"
+fi
+
 if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
     set +x
     echo "error: ${BUILD_DIR} is not configured." >&2
