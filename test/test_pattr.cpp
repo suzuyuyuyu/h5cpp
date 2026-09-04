@@ -272,6 +272,8 @@ void test_attr_scalar_types(h5cpp::parallel_file& f)
                  "int32 attribute on a group");
     H5CPP_ASSERT(f.read_attr_scalar<double>("/", "version") == 2.5,
                  "double attribute on the root");
+    H5CPP_ASSERT(f.attr_length(obj, "time") == 1,
+                 "scalar attribute length");
 
     // Same value on every rank.
     long long step = f.read_attr_scalar<std::int32_t>(obj, "step");
@@ -280,6 +282,59 @@ void test_attr_scalar_types(h5cpp::parallel_file& f)
     MPI_Allreduce(&step, &hi, 1, MPI_LONG_LONG, MPI_MAX, MPI_COMM_WORLD);
     H5CPP_ASSERT(lo == hi, "ranks read different int32 attributes (%lld..%lld)",
                  lo, hi);
+}
+
+template <class T>
+void check_attr_array_type(h5cpp::parallel_file& f, const char* name,
+                           const std::vector<T>& values)
+{
+    for (const char* obj : { "/fields/velocity/data", "/fields", "/" }) {
+        // There is deliberately no count argument: it comes from values.size().
+        f.write_attr_array(obj, name, values);
+        const std::vector<T> got = f.read_attr_array<T>(obj, name);
+        H5CPP_ASSERT(got.size() == values.size(),
+                     "%s on %s: self-sized read has %lu elements, want %lu",
+                     name, obj, static_cast<unsigned long>(got.size()),
+                     static_cast<unsigned long>(values.size()));
+        H5CPP_ASSERT(got == values, "%s on %s: array values differ", name,
+                     obj);
+        H5CPP_ASSERT(f.attr_length(obj, name) == values.size(),
+                     "%s on %s: attribute length differs", name, obj);
+    }
+}
+
+/// Every numeric type h5cpp supports, on a dataset, group and root.
+void test_attr_array_types(h5cpp::parallel_file& f)
+{
+    check_attr_array_type(f, "array_f32",
+                          std::vector<float>{ 1.25f, -3.5f, 8.75f });
+    check_attr_array_type(f, "array_f64",
+                          std::vector<double>{ -2.125, 7.5, 19.25 });
+    check_attr_array_type(f, "array_i32",
+                          std::vector<std::int32_t>{ -700001, 23, 9000007 });
+    check_attr_array_type(
+        f, "array_i64",
+        std::vector<std::int64_t>{ -9000000001LL, 31, 700000000003LL });
+    check_attr_array_type(
+        f, "array_bool",
+        std::vector<h5c_bool_t>{ H5C_TRUE, H5C_FALSE, H5C_TRUE });
+
+    const std::vector<std::int32_t> first = { 41, -3, 700, 19 };
+    const std::vector<std::int32_t> second = { -11, 83 };
+    f.write_attr_array("/fields", "replace_array", first);
+    f.write_attr_array("/fields", "replace_array", second);
+    H5CPP_ASSERT(f.attr_length("/fields", "replace_array") == second.size(),
+                 "replaced array attribute length");
+    H5CPP_ASSERT(
+        f.read_attr_array<std::int32_t>("/fields", "replace_array") == second,
+        "replaced array attribute values");
+
+    const std::vector<double> empty;
+    f.write_attr_array("/", "empty_array", empty);
+    H5CPP_ASSERT(f.attr_length("/", "empty_array") == 0,
+                 "empty array attribute length");
+    H5CPP_ASSERT(f.read_attr_array<double>("/", "empty_array").empty(),
+                 "empty array attribute round-trip");
 }
 
 /// Attributes have no `replace` flag: writing the same name again overwrites.
@@ -318,6 +373,11 @@ void test_attr_missing(h5cpp::parallel_file& f)
     H5CPP_ASSERT(st == H5C_ERR_NOT_FOUND, "missing numeric attribute: got %s",
                  h5c_status_string(st));
     assert_same_status(st, "missing numeric attribute");
+
+    st = status_of([&] { (void)f.read_attr_array<double>(obj, "absent"); });
+    H5CPP_ASSERT(st == H5C_ERR_NOT_FOUND, "missing array attribute: got %s",
+                 h5c_status_string(st));
+    assert_same_status(st, "missing array attribute");
 
     st = status_of([&] { (void)f.read_attr_str("/no/such/object", "where"); });
     H5CPP_ASSERT(st == H5C_ERR_NOT_FOUND, "attribute of a missing object: %s",
@@ -411,6 +471,7 @@ int main(int argc, char** argv)
         write_field(f);
         test_attr_targets(f);
         test_attr_scalar_types(f);
+        test_attr_array_types(f);
         test_attr_replace(f);
         test_attr_missing(f);
         f.close();

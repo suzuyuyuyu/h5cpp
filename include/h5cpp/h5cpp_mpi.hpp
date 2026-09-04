@@ -319,6 +319,33 @@ class parallel_file {
         return value;
     }
 
+    /// Writes a numeric 1-D attribute. The count comes from the container, so
+    /// it cannot disagree with the storage passed to h5c. Collective.
+    template <class T>
+    void write_attr_array(const std::string& obj_path, const std::string& name, const std::vector<T>& values) {
+        static_assert(!std::is_same<T, bool>::value,
+                      "h5cpp: std::vector<bool> is a bitset and has no "
+                      "contiguous buffer to hand to HDF5. Use "
+                      "std::vector<h5c_bool_t> instead.");
+        detail::check(h5c_write_attr_array(handle_, obj_path.c_str(), name.c_str(), values.data(), type_of<T>::value, values.size()), "write_attr_array '" + obj_path + ":" + name + "'");
+    }
+
+    /// Reads a numeric 1-D attribute, sizing the result from its stored length.
+    /// Collective.
+    template <class T>
+    std::vector<T> read_attr_array(const std::string& obj_path, const std::string& name) {
+        std::vector<T> out(attr_length(obj_path, name));
+        detail::check(h5c_read_attr_array(handle_, obj_path.c_str(), name.c_str(), out.data(), type_of<T>::value, out.size()), "read_attr_array '" + obj_path + ":" + name + "'");
+        return out;
+    }
+
+    /// Elements in an attribute: 1 for a scalar, n for an array. Collective.
+    std::size_t attr_length(const std::string& obj_path, const std::string& name) {
+        std::size_t count = 0;
+        detail::check(h5c_attr_length(handle_, obj_path.c_str(), name.c_str(), &count), "attr_length '" + obj_path + ":" + name + "'");
+        return count;
+    }
+
     /// Local query, like exists(): never touches the sticky status.
     bool attr_exists(const std::string& obj_path, const std::string& name) const {
         return h5c_attr_exists(handle_, obj_path.c_str(), name.c_str()) != 0;

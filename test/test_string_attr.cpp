@@ -237,6 +237,65 @@ void test_attr_scalar_types()
                  "int32 attribute on a group");
     H5CPP_ASSERT(f.read_attr_scalar<double>("/", "version") == 2.5,
                  "double attribute on the root");
+    H5CPP_ASSERT(f.attr_length("/mesh/coords", "time") == 1,
+                 "scalar attribute length");
+
+    f.close();
+}
+
+template <class T>
+void check_attr_array_type(h5cpp::file& f, const char* name,
+                           const std::vector<T>& values)
+{
+    for (const char* obj : { "/mesh/coords", "/mesh", "/" }) {
+        // There is deliberately no count argument: it comes from values.size().
+        f.write_attr_array(obj, name, values);
+        const std::vector<T> got = f.read_attr_array<T>(obj, name);
+        H5CPP_ASSERT(got.size() == values.size(),
+                     "%s on %s: self-sized read has %lu elements, want %lu",
+                     name, obj, static_cast<unsigned long>(got.size()),
+                     static_cast<unsigned long>(values.size()));
+        H5CPP_ASSERT(got == values, "%s on %s: array values differ", name,
+                     obj);
+        H5CPP_ASSERT(f.attr_length(obj, name) == values.size(),
+                     "%s on %s: attribute length differs", name, obj);
+    }
+}
+
+/// Every numeric type h5cpp supports, on a dataset, group and root.
+void test_attr_array_types()
+{
+    h5cpp::file f(kPath, h5cpp::mode::readwrite);
+
+    check_attr_array_type(f, "array_f32",
+                          std::vector<float>{ 1.25f, -3.5f, 8.75f });
+    check_attr_array_type(f, "array_f64",
+                          std::vector<double>{ -2.125, 7.5, 19.25 });
+    check_attr_array_type(f, "array_i32",
+                          std::vector<std::int32_t>{ -700001, 23, 9000007 });
+    check_attr_array_type(
+        f, "array_i64",
+        std::vector<std::int64_t>{ -9000000001LL, 31, 700000000003LL });
+    check_attr_array_type(
+        f, "array_bool",
+        std::vector<h5c_bool_t>{ H5C_TRUE, H5C_FALSE, H5C_TRUE });
+
+    const std::vector<std::int32_t> first = { 41, -3, 700, 19 };
+    const std::vector<std::int32_t> second = { -11, 83 };
+    f.write_attr_array("/mesh", "replace_array", first);
+    f.write_attr_array("/mesh", "replace_array", second);
+    H5CPP_ASSERT(f.attr_length("/mesh", "replace_array") == second.size(),
+                 "replaced array attribute length");
+    H5CPP_ASSERT(f.read_attr_array<std::int32_t>("/mesh", "replace_array") ==
+                     second,
+                 "replaced array attribute values");
+
+    const std::vector<double> empty;
+    f.write_attr_array("/", "empty_array", empty);
+    H5CPP_ASSERT(f.attr_length("/", "empty_array") == 0,
+                 "empty array attribute length");
+    H5CPP_ASSERT(f.read_attr_array<double>("/", "empty_array").empty(),
+                 "empty array attribute round-trip");
 
     f.close();
 }
@@ -278,6 +337,11 @@ void test_attr_missing()
     H5CPP_ASSERT(st == H5C_ERR_NOT_FOUND, "missing numeric attribute: got %s",
                  h5c_status_string(st));
 
+    st = status_of(
+        [&] { (void)f.read_attr_array<double>("/mesh/coords", "absent"); });
+    H5CPP_ASSERT(st == H5C_ERR_NOT_FOUND, "missing array attribute: got %s",
+                 h5c_status_string(st));
+
     // A missing OBJECT is also NOT_FOUND, and the message must name it.
     try {
         (void)f.read_attr_str("/no/such/object", "where");
@@ -310,6 +374,7 @@ int main()
     test_string_vlen();
     test_attr_targets();
     test_attr_scalar_types();
+    test_attr_array_types();
     test_attr_replace();
     test_attr_missing();
 
